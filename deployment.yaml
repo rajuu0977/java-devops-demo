@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-devops-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-devops-app
+  template:
+    metadata:
+      labels:
+        app: java-devops-app
+    spec:
+      containers:
+        - name: java-devops-app
+          image: java-devops-demo:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
