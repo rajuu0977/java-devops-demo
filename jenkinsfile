@@ -1,0 +1,29 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Maven Build') {
+            steps {
+                dir('/var/lib/jenkins/java-devops-demo') {
+                    sh 'mvn clean package'
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                dir('/var/lib/jenkins/java-devops-demo') {
+                    sh 'docker build -t java-devops-demo:jenkins .'
+                }
+            }
+        }
+
+        stage('Kubernetes Deploy') {
+            steps {
+                sh 'kubectl apply -f /var/lib/jenkins/java-devops-demo/deployment.yaml'
+                sh 'kubectl apply -f /var/lib/jenkins/java-devops-demo/service.yaml'
+            }
+        }
+    }
+}
