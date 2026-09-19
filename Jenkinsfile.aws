@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'eu-north-1'
+        AWS_ACCOUNT_ID = sh(
+            script: "aws sts get-caller-identity --query Account --output text",
+            returnStdout: true
+        ).trim()
+        ECR_REPO = 'java-devops-demo'
+        EKS_CLUSTER = 'java-devops-eks'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Maven Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                '''
+            }
+        }
+
+        stage('ECR Login & Push') {
+            steps {
+                sh '''
+                    ECR_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}
+
+                    aws ecr get-login-password --region ${AWS_REGION} | \
+                    docker login --username AWS --password-stdin \
+                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                    docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
+
+                    docker push ${ECR_URI}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('EKS Deploy') {
+            steps {
+                sh '''
+                    aws eks update-kubeconfig \
+                    --region ${AWS_REGION} \
+                    --name ${EKS_CLUSTER}
+
+                    sed "s|IMAGE_PLACEHOLDER|${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}|g" deployment.yaml > deployment-aws.yaml
+
+                    kubectl apply -f deployment-aws.yaml
+                    kubectl apply -f service.yaml
+
+                    kubectl rollout status deployment/java-devops-app --timeout=180s
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'AWS DevOps deployment completed successfully!'
+        }
+        failure {
+            echo 'AWS DevOps pipeline failed. Check the stage logs.'
+        }
+    }
+}
