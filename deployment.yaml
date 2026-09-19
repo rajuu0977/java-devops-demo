@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: java-devops-app
-          image: java-devops-demo:jenkins
-          imagePullPolicy: IfNotPresent
+          image:IMAGE_PLACEHOLDER
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
