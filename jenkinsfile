@@ -5,17 +5,14 @@ pipeline {
 
         stage('Maven Build') {
             steps {
-                dir('/var/lib/jenkins/java-devops-demo') {
-                    sh 'mvn clean package'
-                }
+                sh 'mvn clean package'
             }
         }
 
         stage('Docker Build') {
             steps {
-                dir('/var/lib/jenkins/java-devops-demo') {
-                    sh 'docker build -t java-devops-demo:jenkins .'
-                }
+                sh 'docker build -t java-devops-demo:jenkins .'
+                sh 'minikube image load java-devops-demo:jenkins'
             }
         }
 
